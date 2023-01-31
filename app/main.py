@@ -18,6 +18,25 @@ from sklearn.cluster import DBSCAN
 clicks = {}
 clusters = {}
 
+class ClusterClicks:
+    def __init__(self, eps: float = 0.5, min_samples: int = 2):
+        self.clustering = DBSCAN(eps=eps, min_samples=min_samples)
+    
+    def fit(self, clicks_array: np.array, page_id: int) -> int:
+        self.clusters = self.clustering.fit(clicks_array)
+        self.cluster_id = self.clusters.labels_[-1]
+
+        if page_id not in clusters:
+            clusters[page_id] = [self.cluster_id]
+        else:
+            clusters[page_id].append(self.cluster_id)
+        
+        return self.cluster_id
+
+
+clustering = ClusterClicks()
+
+
 async def version(request):
     return JSONResponse({"version": 0})
 
@@ -29,7 +48,7 @@ async def save_click_and_predict_cluster_api(request: NewClickRequest):
 
 async def predict_cluster_api(request: NewClickRequest):
 
-# get coordinates
+    # get coordinates
     coordinates = request.coordinates
     page_id = request.page_uuid
 
@@ -41,19 +60,11 @@ async def predict_cluster_api(request: NewClickRequest):
     else:
         clicks[page_id].append(X)
 
-    # creating a clicks array for a specific page as clusters are different from one page to another.
+    # creating a clicks array for a specific page_id as clusters are different from one page to another.
     clicks_array = np.array(clicks[page_id])
 
 
-    clustering = DBSCAN(eps = 0.5, min_samples=2).fit(clicks_array)
-
-    print(clustering.labels_)
-    # adding the final cluster_id into the clusters dict
-    cluster_id = clustering.labels_[-1]    
-    if page_id not in clusters:
-        clusters[page_id] = [cluster_id]
-    else:
-        clusters[page_id].append(cluster_id)
+    cluster_id = clustering.fit(clicks_array, page_id)
         
     return PredictClickResponse(cluster_idx=cluster_id)
 
