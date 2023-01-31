@@ -118,7 +118,7 @@ async def predict_cluster_api(request: NewClickRequest):
 prod_routes = [
     Route("/", endpoint=version, methods=["GET"]),
     APIRoute(
-        "/save_click_and_predict_cluster",
+        "/new_click",
         endpoint=save_click_and_predict_cluster_api,
         methods=["POST"],
     ),
