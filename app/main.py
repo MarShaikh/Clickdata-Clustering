@@ -11,6 +11,12 @@ from data_models import (
     GetBestClusterRequest,
 )
 
+import numpy as np
+from sklearn.cluster import DBSCAN
+
+
+clicks = {}
+clusters = {}
 
 async def version(request):
     return JSONResponse({"version": 0})
@@ -22,8 +28,34 @@ async def save_click_and_predict_cluster_api(request: NewClickRequest):
 
 
 async def predict_cluster_api(request: NewClickRequest):
-    # TODO: fill up
-    return PredictClickResponse(cluster_idx=None)  # TODO
+
+# get coordinates
+    coordinates = request.coordinates
+    page_id = request.page_uuid
+
+    X = (coordinates.x, coordinates.y)
+
+    # append coordinates as they arrive in a stream
+    if page_id not in clicks:
+        clicks[page_id] = [X]
+    else:
+        clicks[page_id].append(X)
+
+    # creating a clicks array for a specific page as clusters are different from one page to another.
+    clicks_array = np.array(clicks[page_id])
+
+
+    clustering = DBSCAN(eps = 0.5, min_samples=2).fit(clicks_array)
+
+    print(clustering.labels_)
+    # adding the final cluster_id into the clusters dict
+    cluster_id = clustering.labels_[-1]    
+    if page_id not in clusters:
+        clusters[page_id] = [cluster_id]
+    else:
+        clusters[page_id].append(cluster_id)
+        
+    return PredictClickResponse(cluster_idx=cluster_id)
 
 
 # async def get_best_cluster_api(request: GetBestClusterRequest):
