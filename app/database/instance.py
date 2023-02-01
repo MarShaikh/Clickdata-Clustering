@@ -52,5 +52,6 @@ def safe_session():
     finally:
         session.close()
 
+
 db_context = contextmanager(safe_session)
 db_instance = DatabaseInstance()
