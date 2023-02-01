@@ -3,6 +3,12 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.routing import Route
 
+# for database handling
+from database.instance import safe_session
+from fastapi import Depends
+from database.models import ClickInputTable
+from sqlalchemy.orm import Session
+
 from data_models import (
     NewClickRequest,
     NewClickResponse,
@@ -35,13 +41,22 @@ async def version(request):
     return JSONResponse({"version": 0})
 
 
-async def save_click_and_predict_cluster_api(request: NewClickRequest):
+async def save_click_and_predict_cluster_api(request: NewClickRequest, db: Session = Depends(safe_session)):
     
     # get coordinates
     coordinates = request.coordinates
     page_id = request.page_uuid
 
     X = (coordinates.x, coordinates.y)
+
+    # storing the coordinates in the database
+    new_click = ClickInputTable(
+        page_uuid = page_id,
+        coordinates = X
+    )
+
+    db.add(new_click)
+    
 
     # append coordingates as they arrive in a stream
     if page_id not in clicks:
