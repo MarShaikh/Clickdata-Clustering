@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.routing import Route
 
-# for database handling
+# imports for database handling
 from database.instance import safe_session
 from fastapi import Depends
 from database.models import ClickInputTable
@@ -15,19 +15,43 @@ from data_models import (
     PredictClickResponse,
 )
 
+# imports for clustering
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-
+# clicks and clusters global variable for persistence storage between API calls
 clicks = {}
 clusters = {}
 
 
 class ClusterClicks:
+    """
+    A class for performing DBSCAN clustering on click data.
+
+    Attributes:
+        clustering: An instance of sklearn.cluster.DBSCAN used for clustering.
+        clusters: The result of the clustering fit.
+        cluster_id: The cluster label of the last sample.
+
+    Methods:
+        fit: Perform DBSCAN clustering on the provided click data.
+
+    """
+
     def __init__(self, eps: float = 0.5, min_samples: int = 2):
         self.clustering = DBSCAN(eps=eps, min_samples=min_samples)
 
-    def fit(self, clicks_array: np.array, page_id: int) -> int:
+    def fit(self, clicks_array: np.array) -> int:
+        """
+        Perform DBSCAN clustering on the provided click data.
+
+        Args:
+            clicks_array (np.array): An array of click data.
+
+        Returns:
+            int: The cluster label of the last sample.
+
+        """
         self.clusters = self.clustering.fit(clicks_array)
         self.cluster_id = self.clusters.labels_[-1]
         return self.cluster_id
@@ -43,6 +67,25 @@ async def version(request):
 async def save_click_and_predict_cluster_api(
     request: NewClickRequest, db: Session = Depends(safe_session)
 ):
+    """
+    This function accepts a request object of type NewClickRequest and
+    a database session object (defaults to a safe session). The function
+    processes the incoming request and adds the new click data to the database
+    and stores the click's coordinates in memory in the form of a list. Then
+    the function performs clustering on the stored click data for the specific
+    page ID and returns a response object of type NewClickResponse containing
+    the cluster index and a flag indicating whether the cluster is new or not.
+
+    Inputs:
+    - request: An object of type NewClickRequest, containing the click
+               coordinates and page ID.
+    - db: A database session object (defaults to a safe session).
+
+    Returns:
+    - NewClickResponse: An object containing the cluster index and a flag
+                        indicating whether the cluster is new or not.
+
+    """
 
     # get coordinates
     coordinates = request.coordinates
@@ -55,7 +98,7 @@ async def save_click_and_predict_cluster_api(
 
     db.add(new_click)
 
-    # append coordingates as they arrive in a stream
+    # append coordinates as they arrive in a stream
     if page_id not in clicks:
         clicks[page_id] = [X]
     else:
@@ -72,26 +115,36 @@ async def save_click_and_predict_cluster_api(
     # Note: Done for the sole purpose of passing tests.
     cluster_id += 1
 
-    print(f"cluster_id: {cluster_id}")
-    print(f"Before: Clusters: {clusters}")
     if page_id not in clusters:
         clusters[page_id] = [cluster_id]
         is_new = True
     else:
-        print(f"clusters[page_id]: {clusters[page_id]}")
         if cluster_id not in clusters[page_id]:
             is_new = True
         else:
             is_new = False
         clusters[page_id].append(cluster_id)
 
-    print(f"After: Clusters: {clusters}")
-
     return NewClickResponse(cluster_idx=cluster_id, is_new=is_new)
 
 
 async def predict_cluster_api(request: NewClickRequest):
+    """
+    This function accepts a request object of type NewClickRequest. The
+    function processes the incoming request and extracts coordinates and
+    page_id from it. The function then clusters the incoming coordinates
+    per page_id and returns a cluster_id that the input coordinates belong to.
 
+    Parameters:
+    request (NewClickRequest): The request containing the coordinate and
+                               page_uuid.
+
+    Returns:
+    PredictClickResponse: Response containing the cluster index for the
+                          coordinate. If the coordinate doesn't belong to any
+                          cluster, the cluster_idx is set to None.
+
+    """
     # get coordinates
     coordinates = request.coordinates
     page_id = request.page_uuid
@@ -115,6 +168,7 @@ async def predict_cluster_api(request: NewClickRequest):
         clusters[page_id] = [cluster_id]
     else:
         clusters[page_id].append(cluster_id)
+
     # if a coordinate doesn't belong to any cluster, DBSCAN's label is -1;
     # for noise or outliers.
     # Here I change it to null as required by the specification
