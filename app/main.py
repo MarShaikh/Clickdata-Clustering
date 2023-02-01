@@ -125,11 +125,6 @@ async def predict_cluster_api(request: NewClickRequest):
     return PredictClickResponse(cluster_idx=cluster_id)
 
 
-# async def get_best_cluster_api(request: GetBestClusterRequest):
-#     # TODO: optional
-#     return GetBestClusterResponse()
-
-
 prod_routes = [
     Route("/", endpoint=version, methods=["GET"]),
     APIRoute(
@@ -141,8 +136,7 @@ prod_routes = [
         "/predict_click",
         endpoint=predict_cluster_api,
         methods=["POST"],
-    ),
-    # APIRoute("/get_best_cluster", endpoint=get_best_cluster_api, methods=["GET"]),
+    )
 ]
 
 app = FastAPI(routes=prod_routes)

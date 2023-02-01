@@ -20,15 +20,3 @@ class NewClickResponse(BaseModel):
 class PredictClickResponse(BaseModel):
     cluster_idx: Optional[int]
 
-
-class Cluster(BaseModel):
-    cluster_idx: int
-    all_coordinates: List[Coordinates]
-
-
-class GetBestClusterRequest(BaseModel):
-    page_uuid: str
-
-
-class GetBestClusterResponse(BaseModel):
-    cluster: Cluster
