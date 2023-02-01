@@ -1,9 +1,8 @@
 """Models for the database"""
 from uuid import uuid4
 
-from sqlalchemy import text as sqlalchemy_text
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.sql.sqltypes import ARRAY
 
 from .instance import db_instance
 
@@ -14,14 +13,20 @@ def string_uuid():
     return str(uuid4())
 
 
-class ExampleTable(Base):
-    __tablename__ = "example_table"
+class ClickInputTable(Base):
+    __tablename__ = "clickInputTable"
 
     id = Column(
-        UUID,
+        Integer,
         primary_key=True,
-        default=string_uuid,
-        server_default=sqlalchemy_text("uuid_generate_v4()"),
+        autoincrement=True
+    )
+    page_uuid = Column(
+        String(10),
+        nullable=False
+    )
+    coordinates = Column(
+        ARRAY(Integer)
     )
 
 
