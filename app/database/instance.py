@@ -40,7 +40,6 @@ class DatabaseInstance:
         return self._session_maker()
 
 
-@contextmanager
 def safe_session():
     """Provide a transactional scope around a series of operations."""
     session = db_instance.initialize_session()
@@ -53,5 +52,5 @@ def safe_session():
     finally:
         session.close()
 
-
+db_context = contextmanager(safe_session)
 db_instance = DatabaseInstance()
