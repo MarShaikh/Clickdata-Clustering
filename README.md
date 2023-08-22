@@ -1,5 +1,3 @@
-# Raft FDML task base microservice
-
 This code uses **`DBSCAN`** from the sklearn.cluster module to perform clustering on click data. 
 
 ---
